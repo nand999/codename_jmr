@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jamur/backend/auth_service.dart';
 import 'package:jamur/homePage.dart';
 import 'package:jamur/lupaPage.dart';
 import 'components/CustomTextField.dart';
@@ -13,30 +14,46 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _isPasswordVisible = false; // Kontrol visibilitas password
+  bool _isPasswordVisible = false; 
+  final AuthService _authService = AuthService();
 
-  void _login() {
+void _login() async {
+  setState(() {
+    _isLoading = true;
+  });
+
+  // Ambil username dan password dari form
+  final username = _usernameController.text;
+  final password = _passwordController.text;
+
+  // Panggil method login untuk proses autentikasi
+  bool loginSuccess = await _authService.login(username, password);
+
+  if (mounted) {
     setState(() {
-      _isLoading = true;
+      _isLoading = false;
     });
-    // Simulasi proses login
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        // Memastikan widget masih ada di widget tree sebelum navigasi
-        setState(() {
-          _isLoading = false;
-        });
-        // Navigasi ke DashboardPage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
-      }
-    });
+
+    if (loginSuccess) {
+      // Jika login berhasil, navigasi ke halaman HomePage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } else {
+      // Jika login gagal, tampilkan pesan kesalahan
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login gagal. Silakan cek kembali username dan password.'),
+        ),
+      );
+    }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +95,7 @@ class _LoginPageState extends State<LoginPage> {
                       // Input Email
                       CustomTextField(
                         hintText: 'Nama pengguna',
-                        controller: _emailController,
+                        controller: _usernameController,
                       ),
                       const SizedBox(height: 20),
 
@@ -133,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                               );
                             },
                             child: const Text(
-                              'Lupa Sandi',
+                              'Klik Disini',
                               style: TextStyle(color: Colors.blue),
                             ),
                           ),

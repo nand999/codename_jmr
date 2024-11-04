@@ -1,348 +1,212 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:jamur/components/ccccc.dart';
-import 'package:jamur/components/customButtonCard.dart';
 import 'package:jamur/components/customCard.dart';
 import 'package:jamur/components/customCardRounded.dart';
-import 'package:jamur/components/customHorizontalCard.dart';
 import 'package:jamur/components/customPopup.dart';
+import 'package:jamur/config.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class DashboardPage2 extends StatefulWidget {
   const DashboardPage2({Key? key}) : super(key: key);
-
   @override
   _DashboardPage2State createState() => _DashboardPage2State();
 }
 
 class _DashboardPage2State extends State<DashboardPage2> {
-  double currentTemperature = 24.5; // Suhu saat ini dalam Celsius
-  double currentHumidity = 75; // Kelembapan saat ini dalam persentase
-  bool isLampOn = false; // Status lampu
-  bool isFanOn = false; // Status kipas
+  List<ChartData> historyChartData = [];
 
-  final List<ChartData> chartData = [
-    ChartData('Hari 1', 23, 70),
-    ChartData('Hari 2', 25, 65),
-    ChartData('Hari 3', 24, 72),
-    ChartData('Hari 4', 26, 68),
-    ChartData('Hari 5', 27, 75),
-    ChartData('Hari 6', 28, 73),
-    ChartData('Hari 7', 24, 70),
-  ];
+  double topBarOpacity = 0.0;
+  double currentTemperature = 00;
+  double currentHumidity = 00;
+  bool isLampOn = false;
+  bool isFanOn = false;
+  Timer? timer;
 
-  void _waterMushroomFarm() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return CustomPopup(
-          title: 'Penyiraman Berhasil',
-          content: 'Kumbung jamur telah disiram.',
-          buttonText: 'OK',
-          onButtonPressed: () {
-            // Aksi setelah penyiraman
-          },
-        );
-      },
-    );
+  // void _waterMushroomFarm() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return CustomPopup(
+  //         title: 'Penyiraman Berhasil',
+  //         content: 'Kumbung jamur telah disiram.',
+  //         buttonText: 'OK',
+  //         onButtonPressed: () {},
+  //       );
+  //     },
+  //   );
+  // }
+
+  Future<void> fetchHistoryData() async {
+    final response =
+        await http.get(Uri.parse('${Config.apiUrl}/get_riwayat_hari.php'));
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['success']) {
+        final data = jsonResponse['data'] as List;
+        setState(() {
+          historyChartData = data.map((item) {
+            String dayOnly =
+                item['tanggal'].substring(item['tanggal'].length - 2);
+            return ChartData(dayOnly, double.parse(item['suhu_average']),
+                double.parse(item['kelembapan_average']));
+          }).toList();
+        });
+      }
+    } else {
+      throw Exception('Failed to load history data');
+    }
+  }
+
+  Future<void> fetchData() async {
+    final response =
+        await http.get(Uri.parse('${Config.apiUrl}/get_realtime_data.php'));
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['success']) {
+        final data = jsonResponse['data'] as List;
+        if (data.isNotEmpty) {
+          final latestData = data.last;
+          setState(() {
+            currentTemperature = double.parse(latestData['suhu']);
+            currentHumidity = double.parse(latestData['kelembapan']);
+          });
+        }
+      }
+    } else {
+      throw Exception('Failed to load data');
+    }
+  }
+
+  Future<void> _refreshData() async {
+    await fetchData();
+    await fetchHistoryData();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+    fetchHistoryData();
+
+    timer = Timer.periodic(const Duration(seconds: 2), (Timer t) => fetchData());
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(backgroundColor: Color(0xFFB2FEFA), ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFB2FEFA), // Warna biru muda yang lembut
-              Color(0xFF0ED2F7), // Warna biru yang lebih tajam
-            ],
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFB2FEFA),
+                Color(0xFF0ED2F7),
+              ],
+            ),
           ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              MediterranesnDietView(),
-              CustomCard(
-                child:  Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Riwayat Suhu dan Kelembapan (7 Hari Terakhir)',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      SfCartesianChart(
-                        primaryXAxis: CategoryAxis(),
-                        legend: Legend(isVisible: true),
-                        tooltipBehavior: TooltipBehavior(enable: true),
-                        series: <CartesianSeries<ChartData, String>>[
-                          LineSeries<ChartData, String>(
-                            dataSource: chartData,
-                            xValueMapper: (ChartData data, _) => data.day,
-                            yValueMapper: (ChartData data, _) =>
-                                data.temperature,
-                            name: 'Suhu (°C)',
-                            dataLabelSettings:
-                                const DataLabelSettings(isVisible: true),
-                          ),
-                          LineSeries<ChartData, String>(
-                            dataSource: chartData,
-                            xValueMapper: (ChartData data, _) => data.day,
-                            yValueMapper: (ChartData data, _) => data.humidity,
-                            name: 'Kelembapan (%)',
-                            dataLabelSettings:
-                                const DataLabelSettings(isVisible: true),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                MediterranesnDietView(
+                  temperature: currentTemperature,
+                  humidity: currentHumidity,
                 ),
-              ),
-              CustomCard(child: Padding(
-                  padding: const EdgeInsets.all(9.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Kondisi Kumbung Jamur Saat Ini:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                DefaultTabController(
+                  length: 2,
+                  child: CustomCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Kotak untuk Suhu
-                          Container(
-                            width: 110,
-                            padding: const EdgeInsets.all(20.0),
-                            margin: const EdgeInsets.symmetric(horizontal: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(10),
+                          const Text(
+                            'Riwayat rata-rata Suhu dan Kelembapan   (7 Hari Terakhir)',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
                             ),
-                            child: Column(
+                            textAlign: TextAlign.center,
+                          ),
+                          const TabBar(
+                            labelColor: Colors.blue,
+                            unselectedLabelColor: Colors.grey,
+                            indicatorColor: Colors.blue,
+                            tabs: [
+                              Tab(text: 'Suhu'),
+                              Tab(text: 'Kelembapan'),
+                            ],
+                          ),
+                          SizedBox(
+                            height: 300, // Tinggi area grafik
+                            child: TabBarView(
                               children: [
-                                const Icon(Icons.thermostat,
-                                    size: 50, color: Colors.blue),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  'Suhu:',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
+                                // Tab Suhu
+                                SfCartesianChart(
+                                  primaryXAxis: CategoryAxis(),
+                                  legend: const Legend(isVisible: true),
+                                  tooltipBehavior:
+                                      TooltipBehavior(enable: true),
+                                  series: <CartesianSeries<ChartData, String>>[
+                                    LineSeries<ChartData, String>(
+                                      dataSource: historyChartData,
+                                      xValueMapper: (ChartData data, _) =>
+                                          data.day,
+                                      yValueMapper: (ChartData data, _) =>
+                                          data.temperature,
+                                      name: 'Suhu (°C)',
+                                      dataLabelSettings:
+                                          const DataLabelSettings(
+                                              isVisible: true),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  '$currentTemperature°C',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
+                                // Tab Kelembapan
+                                SfCartesianChart(
+                                  primaryXAxis: CategoryAxis(),
+                                  legend: const Legend(isVisible: true),
+                                  tooltipBehavior:
+                                      TooltipBehavior(enable: true),
+                                  series: <CartesianSeries<ChartData, String>>[
+                                    LineSeries<ChartData, String>(
+                                      dataSource: historyChartData,
+                                      xValueMapper: (ChartData data, _) =>
+                                          data.day,
+                                      yValueMapper: (ChartData data, _) =>
+                                          data.humidity,
+                                      name: 'Kelembapan (%)',
+                                      dataLabelSettings:
+                                          const DataLabelSettings(
+                                              isVisible: true),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          // Kotak untuk Kelembapan
-                          Container(
-                            width: 110,
-                            padding: const EdgeInsets.all(20.0),
-                            margin: const EdgeInsets.symmetric(horizontal: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              children: [
-                                const Icon(Icons.water_drop,
-                                    size: 50, color: Colors.blue),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  'Kelembapan:',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                Text(
-                                  '$currentHumidity%',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
-                      SizedBox(height: 10,)
-                    ],
-                  ),
-                ),),
-
-
-              const SizedBox(height: 30),
-
-              // // Tombol Penyiraman
-              // ElevatedButton.icon(
-              //   onPressed: _waterMushroomFarm,
-              //   icon: const Icon(Icons.water_damage, color: Colors.blue),
-              //   label: const Text(
-              //     'Sirami Kumbung Jamur',
-              //     style: TextStyle(color: Colors.blue),
-              //   ),
-              //   style: ElevatedButton.styleFrom(
-              //     padding: const EdgeInsets.symmetric(vertical: 15),
-              //     textStyle: const TextStyle(fontSize: 18),
-              //   ),
-              // ),
-
-              CustomButtonCard(
-                logoPath: 'assets/images/jamur.png',
-                label: 'Sirami Kumbung Jamur',
-                onPressed: _waterMushroomFarm,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Card Horizontal untuk Lampu
-              Card(
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Label Lampu
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Lampu',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 5),
-                          Text(
-                            'Status: Mati/Hidup',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Switch Lampu
-                      Switch(
-                        value: isLampOn, // status switch (true/false)
-                        onChanged: (bool value) {
-                          setState(() {
-                            isLampOn = value; // Ganti status switch
-                            // Tambahkan fungsi untuk mengontrol lampu di sini
-                          });
-                        },
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-
-              // Card Horizontal untuk Kipas
-              Card(
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Label Kipas
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Kipas',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 5),
-                          Text(
-                            'Status: Mati/Hidup',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Switch Kipas
-                      Switch(
-                        value: isFanOn, // status switch (true/false)
-                        onChanged: (bool value) {
-                          setState(() {
-                            isFanOn = value; // Ganti status switch
-                            // Tambahkan fungsi untuk mengontrol kipas di sini
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              CustomHorizontalCard(
-                logoPath: 'assets/images/jamur.png',
-                label: 'Lampu',
-                switchValue: isLampOn,
-                onToggle: (value) {
-                  setState(() {
-                    isLampOn = value;
-                  });
-                },
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              CustomHorizontalCard(
-                logoPath: 'assets/images/jamur.png',
-                label: 'Kipas',
-                switchValue: isFanOn,
-                onToggle: (value) {
-                  setState(() {
-                    isFanOn = value;
-                  });
-                },
-              ),
-            ],
+                const SizedBox(height: 37),
+              ],
+            ),
           ),
         ),
       ),
@@ -350,7 +214,6 @@ class _DashboardPage2State extends State<DashboardPage2> {
   }
 }
 
-// Class untuk data chart (suhu dan kelembapan)
 class ChartData {
   ChartData(this.day, this.temperature, this.humidity);
   final String day;

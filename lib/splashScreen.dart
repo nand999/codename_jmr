@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:jamur/loginPage.dart';
+import 'package:jamur/homePage.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -22,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
       _opacity = 1.0; 
     });
     await Future.delayed(Duration(seconds: 1)); 
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => LoginPage()));
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
   }
 
   @override
@@ -33,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: AnimatedOpacity(
           opacity: _opacity,
           duration: Duration(seconds: 1), // Durasi animasi
-          child: Image.asset('assets/images/jamur.png',width: 200,height: 200,), 
+          child: Image.asset('assets/images/logo.png',width: 200,height: 200,), 
         ),
       ),
     );
