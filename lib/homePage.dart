@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jamur/dashboardPage2.dart';
 import 'package:jamur/notifPage.dart';
 import 'package:jamur/pemantauanPage.dart';
+import 'package:jamur/riwayatPage.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -45,7 +46,7 @@ class _HomePageState extends State<HomePage> {
           DashboardPage2(),
           PemantauanPage(),
           NotificationPage(),
-          // SettingsPage(),
+          RiwayatPage(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -63,10 +64,10 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.notifications),
             label: 'Notifikasi',
           ),
-          // BottomNavigationBarItem(
-          //   icon: Icon(Icons.settings),
-          //   label: 'Settings',
-          // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'Riwayat',
+          ),
         ],
         currentIndex: _currentIndex,
         selectedItemColor: Colors.blue, // Warna item yang dipilih

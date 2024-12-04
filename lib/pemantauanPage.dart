@@ -1,11 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:jamur/DetailGambarPage.dart';
+import 'dart:async';
 import 'package:jamur/components/customCard.dart';
 import 'package:jamur/components/navbar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:jamur/config.dart';
+import 'package:jamur/config.dart'; // Import halaman detail gambar
 
 class PemantauanPage extends StatefulWidget {
   const PemantauanPage({Key? key}) : super(key: key);
@@ -20,34 +20,40 @@ class _PemantauanPageState extends State<PemantauanPage> {
   String akurasi = '';
   Timer? timer;
 
-  // Fungsi untuk fetch data dari API
-Future<void> fetchPrediksi() async {
-  final response = await http.get(Uri.parse('${Config.apiUrl}/get_prediksi.php'));
+  Future<void> fetchPrediksi() async {
+    final response = await http.get(Uri.parse('${Config.apiUrl}/get_prediksi.php'));
 
-  if (response.statusCode == 200) {
-    final jsonResponse = json.decode(response.body);
-    if (jsonResponse['success']) {
-      if (mounted) { // Tambahkan pengecekan ini
-        setState(() {
-          waktu = jsonResponse['data']['waktu'];
-          kategori = jsonResponse['data']['kategori'];
-          akurasi = jsonResponse['data']['akurasi'];
-        });
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['success']) {
+        if (mounted) {
+          setState(() {
+            waktu = jsonResponse['data']['waktu'];
+            kategori = jsonResponse['data']['kategori'];
+            akurasi = jsonResponse['data']['akurasi'];
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            waktu = 'Data tidak ditemukan';
+            kategori = 'Tidak ada akurasi';
+            akurasi = '0%';
+          });
+        }
       }
     } else {
-      if (mounted) { // Tambahkan pengecekan ini juga di sini
-        setState(() {
-          waktu = 'Data tidak ditemukan';
-          kategori = 'Tidak ada akurasi';
-          akurasi = '0%';
-        });
-      }
+      throw Exception('Failed to load prediction');
     }
-  } else {
-    throw Exception('Failed to load prediction');
   }
-}
 
+  String getFormattedDate() {
+    final DateTime now = DateTime.now();
+    final String day = now.day.toString();
+    final String month = now.month.toString();
+    final String year = now.year.toString();
+    return '${day}_${month}_${year}';
+  }
 
   @override
   void initState() {
@@ -64,6 +70,9 @@ Future<void> fetchPrediksi() async {
 
   @override
   Widget build(BuildContext context) {
+    String formattedDate = getFormattedDate();
+    String imageUrl = "${Config.apiUrl}/captured_images/$formattedDate.jpg";
+
     return Scaffold(
       appBar: CustomNavbar(
         onLogoutTap: () {},
@@ -74,18 +83,34 @@ Future<void> fetchPrediksi() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blueAccent, width: 2),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.image,
-                  color: Colors.white,
-                  size: 50,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailGambarPage(imageUrl: imageUrl),
+                  ),
+                );
+              },
+              child: Hero(
+                tag: 'imageHero',
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.blueAccent, width: 2),
+                  ),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text(
+                        'Gambar tidak tersedia',
+                        style: TextStyle(color: Colors.white),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
