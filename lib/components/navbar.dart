@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'customPopup.dart'; // Import the CustomPopup widget
 
 class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
@@ -41,7 +42,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                   secondButtonText: 'Tidak',
                   onButtonPressed: () {
                     // If 'Ya' is pressed
-                    // Navigator.of(context).pop();
+                    SystemNavigator.pop();
                   },
                   onSecondButtonPressed: () {
                     // If 'Tidak' is pressed, close the dialog

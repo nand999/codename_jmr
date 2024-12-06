@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jamur/components/navbar.dart';
 import 'package:jamur/components/customButton.dart';
 import 'package:jamur/detailRiwayat.dart';
@@ -63,7 +64,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
     return Scaffold(
       appBar: CustomNavbar(
-        onLogoutTap: () {},
+        onLogoutTap: () {SystemNavigator.pop();},
         titleText: "Riwayat Jamur",
       ),
       body: Stack(

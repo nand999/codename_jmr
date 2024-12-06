@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jamur/components/navbar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -55,7 +56,7 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomNavbar(onLogoutTap: () {}, titleText: "Notifikasi"),
+      appBar: CustomNavbar(onLogoutTap: () {SystemNavigator.pop();}, titleText: "Notifikasi"),
       body: RefreshIndicator(
           onRefresh: _refreshNotifications,
           child: notifications.isEmpty

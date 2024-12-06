@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jamur/DetailGambarPage.dart';
 import 'dart:async';
 import 'package:jamur/components/customCard.dart';
@@ -75,7 +76,7 @@ class _PemantauanPageState extends State<PemantauanPage> {
 
     return Scaffold(
       appBar: CustomNavbar(
-        onLogoutTap: () {},
+        onLogoutTap: () {SystemNavigator.pop();},
         titleText: "Pemantauan Langsung",
       ),
       body: Padding(
